@@ -113,6 +113,17 @@ class collaborative_filtering:
             items[i] = self.x_train[:,nearest_sims[i][1]]
 
         return np.nanmean(self.x_train[:, item_id]) + (1/abs(sims).sum()) * np.nansum((sims * (items[:, user_id] - np.nanmean(items, axis = 1))))
+    
+    # adjusted weighted sum
+    def weighted_sum(self, user_id, item_id):
+        pass
+
+    def mean_utility(self, user_id, item_id):
+        item_ratings = self.x_train[:, item_id]
+        rated = item_ratings[~np.isnan(item_ratings)]
+        if len(rated) == 0:
+            return 0
+        return np.mean(rated)
         
     def evaluation(method, size, repeats):
         model = collaborative_filtering(method)
@@ -130,7 +141,7 @@ class collaborative_filtering:
                 while invalid_pair:
                     row = random.randint(0, rows)
                     column = random.randint(0, columns)
-                    if mode.x_train[row][column] != np.nan:
+                    if model.x_train[row][column] != np.nan:
                         user_id = row
                         item_id = column 
                         actual_rating = model.x_train[user_id][item_id]
@@ -188,9 +199,9 @@ class collaborative_filtering:
             return self.knn_item(user_id, item_id)
             pass
         elif self.method == "method 3":
-            pass
+            return self.weighted_sum(user_id, item_id)
         else:
-            pass
+            return self.mean_utility(user_id, item_id)
         
         if ~index_is_nan:
             self.x_train[user_id][item_id] = prev_value
