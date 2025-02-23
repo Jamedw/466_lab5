@@ -124,62 +124,6 @@ class collaborative_filtering:
         if len(rated) == 0:
             return 0
         return np.mean(rated)
-        
-    def evaluation(method, size, repeats):
-        model = collaborative_filtering(method)
-        model.fit(collaborative_filtering.parse_data("./jester-data-1.csv"))
-        rows = model.x_train.shape[0]
-        columns = model.x_train.shape[1]
-        
-        runs_deltas = np.ones((repeats,size))
-        for j in range(repeats):
-            run_delta = np.ones(size)
-            ## using a for loop rn hhowever np.choice may work with a masked 
-            ## x_train
-            for i in range(size):
-                invalid_pair = True
-                while invalid_pair:
-                    row = random.randint(0, rows)
-                    column = random.randint(0, columns)
-                    if model.x_train[row][column] != np.nan:
-                        user_id = row
-                        item_id = column 
-                        actual_rating = model.x_train[user_id][item_id]
-                        predicted_rating = model.predict(user_id, item_id)
-                        delta_rating = actual_rating - predicted_rating
-                        run_delta[i] = delta_rating
-                        print(f"{user_id},{item_id},{actual_rating},{predicted_rating},{delta_rating}")
-                        invalid_pair = False
-            print(f"MAE: {abs(run_delta).mean()}")
-            print(f"Standard Deviation; {np.sqrt(np.sum(np.square(run_delta - run_delta.mean())) / len(run_delta))}")
-            runs_deltas[j] = run_delta
-        
-        
-        """
-        The above code is to specification for the first eval description 
-        
-        flat_runs_deltas = runs_deltas.flatten()
-        print(f"Overall MAE: {abs(flat_runs_deltas).mean()}")
-        """
-        
-    def evaluation_csv(method, filepath):
-        model = collaborative_filtering(method)
-        model.fit(collaborative_filtering.parse_data("./jester-data-1.csv"))
-
-        points = pd.read_csv(filepath, header=None)
-        
-        run_delta = np.ones(len(points))
-        for index, row in points.iterrows():
-            user_id = row[0]
-            item_id = row[1] 
-            actual_rating = model.x_train[user_id][item_id]
-            predicted_rating = model.predict(user_id, item_id)
-            delta_rating = actual_rating - predicted_rating
-            run_delta[index] = delta_rating
-            print(f"{user_id},{item_id},{actual_rating},{predicted_rating},{delta_rating}")
-        
-        print(f"MAE: {np.nanmean(abs(run_delta))}")
-        print(f"Standard Deviation; {np.sqrt(np.nansum(np.square(run_delta - np.nanmean(run_delta))) / len(run_delta))}")
     
     def predict(self, user_id, item_id):
         
@@ -202,9 +146,62 @@ class collaborative_filtering:
             return self.weighted_sum(user_id, item_id)
         else:
             return self.mean_utility(user_id, item_id)
-        
+        # what is this next line for?
         if ~index_is_nan:
             self.x_train[user_id][item_id] = prev_value
         
-        
-        
+def evaluation(method, size, repeats):
+    model = collaborative_filtering(method)
+    model.fit(collaborative_filtering.parse_data("./jester-data-1.csv"))
+    rows = model.x_train.shape[0]
+    columns = model.x_train.shape[1]
+    
+    runs_deltas = np.ones((repeats,size))
+    for j in range(repeats):
+        run_delta = np.ones(size)
+        ## using a for loop rn hhowever np.choice may work with a masked 
+        ## x_train
+        for i in range(size):
+            invalid_pair = True
+            while invalid_pair:
+                row = random.randint(0, rows)
+                column = random.randint(0, columns)
+                if model.x_train[row][column] != np.nan:
+                    user_id = row
+                    item_id = column 
+                    actual_rating = model.x_train[user_id][item_id]
+                    predicted_rating = model.predict(user_id, item_id)
+                    delta_rating = actual_rating - predicted_rating
+                    run_delta[i] = delta_rating
+                    print(f"{user_id},{item_id},{actual_rating},{predicted_rating},{delta_rating}")
+                    invalid_pair = False
+        print(f"MAE: {abs(run_delta).mean()}")
+        print(f"Standard Deviation; {np.sqrt(np.sum(np.square(run_delta - run_delta.mean())) / len(run_delta))}")
+        runs_deltas[j] = run_delta
+    
+    
+    """
+    The above code is to specification for the first eval description 
+    
+    flat_runs_deltas = runs_deltas.flatten()
+    print(f"Overall MAE: {abs(flat_runs_deltas).mean()}")
+    """
+    
+def evaluation_csv(method, filepath):
+    model = collaborative_filtering(method)
+    model.fit(collaborative_filtering.parse_data("./jester-data-1.csv"))
+
+    points = pd.read_csv(filepath, header=None)
+    
+    run_delta = np.ones(len(points))
+    for index, row in points.iterrows():
+        user_id = row[0]
+        item_id = row[1] 
+        actual_rating = model.x_train[user_id][item_id]
+        predicted_rating = model.predict(user_id, item_id)
+        delta_rating = actual_rating - predicted_rating
+        run_delta[index] = delta_rating
+        print(f"{user_id},{item_id},{actual_rating},{predicted_rating},{delta_rating}")
+    
+    print(f"MAE: {np.nanmean(abs(run_delta))}")
+    print(f"Standard Deviation; {np.sqrt(np.nansum(np.square(run_delta - np.nanmean(run_delta))) / len(run_delta))}")
