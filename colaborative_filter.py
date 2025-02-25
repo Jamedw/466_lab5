@@ -116,9 +116,37 @@ class collaborative_filtering:
     
     # adjusted weighted sum
     def weighted_sum(self, user_id, item_id):
-        pass
+        user_ratings = self.x_train[user_id]
+        user_rated = user_ratings[~np.isnan(user_ratings)]
+        user_mean = np.mean(user_rated) if len(user_rated) > 0 else 0
+        
+        sum_weighted_ratings = 0.0
+        sum_abs_similarities = 0.0
 
-    def mean_utility(self, user_id, item_id):
+        for other_user_id in range(len(self.x_train)):
+            if other_user_id == user_id:
+                continue
+            if np.isnan(self.x_train[other_user_id, item_id]):
+                continue
+            similarity = self.user_similarity(user_id, other_user_id)
+            
+            # no shared items
+            if np.isnan(similarity):
+                continue
+
+            other_user_ratings = self.x_train[other_user_id]
+            other_rated = other_user_ratings[~np.isnan(other_user_ratings)]
+            other_user_mean = np.mean(other_rated) if len(other_rated) > 0 else 0
+            other_rating = self.x_train[other_user_id, item_id]
+
+            sum_weighted_ratings += similarity * (other_rating - other_user_mean)
+            sum_abs_similarities += abs(similarity)
+
+        k = 1.0 / sum_abs_similarities
+        prediction = user_mean + k * sum_weighted_ratings
+        return prediction
+
+    def mean_utility(self, item_id):
         item_ratings = self.x_train[:, item_id]
         rated = item_ratings[~np.isnan(item_ratings)]
         if len(rated) == 0:
@@ -145,7 +173,7 @@ class collaborative_filtering:
         elif self.method == "method 3":
             return self.weighted_sum(user_id, item_id)
         else:
-            return self.mean_utility(user_id, item_id)
+            return self.mean_utility(item_id)
         # what is this next line for?
         if ~index_is_nan:
             self.x_train[user_id][item_id] = prev_value
