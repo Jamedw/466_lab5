@@ -1,7 +1,8 @@
 import sys
-from colaborative_filter import evaluation
+from colaborative_filter import evaluation, eval_report
+
 if __name__ == "__main__":
-    if len(sys.argv) == 2:
+    if len(sys.argv) < 4:
         print("Methods: knn_user, knn_item, weighted_sum, mean_utility")
         sys.exit(1)
     elif len(sys.argv) != 4:
@@ -9,7 +10,8 @@ if __name__ == "__main__":
         sys.exit(1)
     
     method = sys.argv[1]
-    size = sys.argv[2]
-    repeats = sys.argv[3]
+    size = int(sys.argv[2])
+    repeats = int(sys.argv[3])
 
-    evaluation(method, size, repeats)
+    results = evaluation(method, size, repeats)
+    eval_report(results)

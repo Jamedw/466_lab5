@@ -13,7 +13,7 @@ import random
 
 class collaborative_filtering:
     
-    methods = {"knn_item","knn_user"}
+    methods = {"knn_item","knn_user", "weighted_sum", "mean_utility"}
     
     def __check_method(self, method):
         if method not in collaborative_filtering.methods:
@@ -159,31 +159,31 @@ class collaborative_filtering:
         ## not empty replace it with nan then preform collaborative filtering 
         
         index_is_nan = True
-        if self.x_train[user_id][item_id] != np.nan:
+        if self.x_train[user_id][item_id] != np.nan and self.x_train[user_id][item_id] != 99:
                 index_is_nan = False
                 prev_value = self.x_train[user_id][item_id]
                 self.x_train[user_id][item_id] = np.nan
         
         if self.method == "knn_user":
-            return self.knn_user(user_id, item_id)
-            pass
+            prediction = self.knn_user(user_id, item_id)
         elif self.method == "knn_item":
-            return self.knn_item(user_id, item_id)
-            pass
-        elif self.method == "method 3":
-            return self.weighted_sum(user_id, item_id)
+            prediction = self.knn_item(user_id, item_id)
+        elif self.method == "weighted_sum":
+            prediction = self.weighted_sum(user_id, item_id)
         else:
-            return self.mean_utility(item_id)
-        # what is this next line for?
-        if ~index_is_nan:
+            prediction = self.mean_utility(item_id)
+
+        if not index_is_nan:
             self.x_train[user_id][item_id] = prev_value
         
+        return prediction
+
 def evaluation(method, size, repeats):
     model = collaborative_filtering(method)
     model.fit(collaborative_filtering.parse_data("./jester-data-1.csv"))
     rows = model.x_train.shape[0]
     columns = model.x_train.shape[1]
-    
+    results = []
     runs_deltas = np.ones((repeats,size))
     for j in range(repeats):
         run_delta = np.ones(size)
@@ -192,8 +192,8 @@ def evaluation(method, size, repeats):
         for i in range(size):
             invalid_pair = True
             while invalid_pair:
-                row = random.randint(0, rows)
-                column = random.randint(0, columns)
+                row = random.randint(0, rows-1)
+                column = random.randint(0, columns-1)
                 if model.x_train[row][column] != np.nan:
                     user_id = row
                     item_id = column 
@@ -201,12 +201,20 @@ def evaluation(method, size, repeats):
                     predicted_rating = model.predict(user_id, item_id)
                     delta_rating = actual_rating - predicted_rating
                     run_delta[i] = delta_rating
-                    print(f"{user_id},{item_id},{actual_rating},{predicted_rating},{delta_rating}")
+                    print(f"User: {user_id}, Item: {item_id}, Actual: {actual_rating}, Predicted: {predicted_rating}, Delta: {delta_rating}")
                     invalid_pair = False
-        print(f"MAE: {abs(run_delta).mean()}")
-        print(f"Standard Deviation; {np.sqrt(np.sum(np.square(run_delta - run_delta.mean())) / len(run_delta))}")
+                    result = {
+                        'user_id': user_id,
+                        'item_id': item_id,
+                        'actual_rating': actual_rating,
+                        'predicted_rating': predicted_rating,
+                        'delta_rating': delta_rating
+                    }
+                    results.append(result)
+        print(f"MAE: {np.nanmean(abs(run_delta))}")
+        print(f"Standard Deviation; {np.sqrt(np.nansum(np.square(run_delta - np.nanmean(run_delta))) / len(run_delta))}")
         runs_deltas[j] = run_delta
-    
+    return results
     
     """
     The above code is to specification for the first eval description 
@@ -215,21 +223,69 @@ def evaluation(method, size, repeats):
     print(f"Overall MAE: {abs(flat_runs_deltas).mean()}")
     """
     
-def evaluation_csv(method, filepath):
+def evaluation_csv(method, filepath, repeats):
     model = collaborative_filtering(method)
     model.fit(collaborative_filtering.parse_data("./jester-data-1.csv"))
 
     points = pd.read_csv(filepath, header=None)
+    results = []
     
-    run_delta = np.ones(len(points))
-    for index, row in points.iterrows():
-        user_id = row[0]
-        item_id = row[1] 
-        actual_rating = model.x_train[user_id][item_id]
-        predicted_rating = model.predict(user_id, item_id)
-        delta_rating = actual_rating - predicted_rating
-        run_delta[index] = delta_rating
-        print(f"{user_id},{item_id},{actual_rating},{predicted_rating},{delta_rating}")
+    for i in range(repeats):
+        run_delta = np.ones(len(points))
+        for index, row in points.iterrows():
+            user_id = row[0]
+            item_id = row[1] 
+            actual_rating = model.x_train[user_id][item_id]
+            predicted_rating = model.predict(user_id, item_id)
+            delta_rating = actual_rating - predicted_rating
+            run_delta[index] = delta_rating
+            print(f"User: {user_id}, Item: {item_id}, Actual: {actual_rating}, Predicted: {predicted_rating}, Delta: {delta_rating}")
+            result = {
+                'user_id': user_id,
+                'item_id': item_id,
+                'actual_rating': actual_rating,
+                'predicted_rating': predicted_rating,
+                'delta_rating': delta_rating
+            }
+            results.append(result)
     
     print(f"MAE: {np.nanmean(abs(run_delta))}")
     print(f"Standard Deviation; {np.sqrt(np.nansum(np.square(run_delta - np.nanmean(run_delta))) / len(run_delta))}")
+    return results
+
+def eval_report(results):
+    total = len(results)
+    true_positives = 0
+    false_positives = 0
+    true_negatives = 0
+    false_negatives = 0
+    
+    for result in results:
+        actual = result['actual_rating'] >= 5.0
+        predicted = result['predicted_rating'] >= 5.0
+        
+        if actual and predicted:
+            true_positives += 1
+        elif not actual and predicted:
+            false_positives += 1
+        elif not actual and not predicted:
+            true_negatives += 1
+        elif actual and not predicted:
+            false_negatives += 1
+
+    print("\nConfusion Matrix:")
+    print(f"True Positives: {true_positives}")
+    print(f"False Positives: {false_positives}")
+    print(f"True Negatives: {true_negatives}")
+    print(f"False Negatives: {false_negatives}")
+
+    precision = true_positives / (true_positives + false_positives)
+    recall = true_positives / (true_positives + false_negatives)
+    f1 = 2 * (precision * recall) / (precision + recall)
+    accuracy = (true_positives + true_negatives) / total
+
+    print("\nRecommendation Metrics:")
+    print(f"Precision: {precision}")
+    print(f"Recall: {recall}")
+    print(f"F1 Score: {f1}")
+    print(f"Overall Accuracy: {accuracy}")
