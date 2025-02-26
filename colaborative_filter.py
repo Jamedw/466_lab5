@@ -71,28 +71,30 @@ class collaborative_filtering:
         denominator = np.sqrt(np.sum(np.square(item_1_shared - item_1_mean))) * np.sqrt(np.sum(np.square(item_2_shared - item_2_mean)))
         return numerator / denominator
     
-    def get_N_neighbors(self, id_num, K=10 ,similarity_type="user"):
+    def get_N_neighbors(self, user_id, item_id , K=50 ,similarity_type="user"):
         similarities = []
         if similarity_type == "user":
             for i in range(len(self.x_train)):
-                if i == id_num:
+                if i == user_id:
                     continue
                 else:
-                    similarities.append((self.user_similarity(id_num, i), i))
+                    if ~np.isnan(self.x_train[i][item_id]):
+                        similarities.append((self.user_similarity(user_id, i), i))
             sorted_neighbors = sorted(similarities, reverse=True)
             return sorted_neighbors[:K]
         else:
             for i in range(len(self.x_train[0])):
-                if i == id_num:
+                if i == item_id:
                     continue
                 else:
-                    similarities.append((self.item_similarity(id_num, i), i))
+                    if ~np.isnan(self.x_train[user_id][i]):
+                        similarities.append((self.item_similarity(item_id, i), i))
             sorted_neighbors = sorted(similarities, reverse=True)
             return sorted_neighbors[:K]
         
     def knn_user(self, user_id, item_id):
         ## assume best K is 10
-        nearest_sims = self.get_N_neighbors(user_id)
+        nearest_sims = self.get_N_neighbors(user_id, item_id)
         users = np.ones((len(nearest_sims), self.x_train.shape[1]))
         sims = np.ones(len(nearest_sims))
 
@@ -104,7 +106,7 @@ class collaborative_filtering:
 
     def knn_item(self, user_id, item_id):
         ## assume best K is 10
-        nearest_sims = self.get_N_neighbors(item_id, similarity_type="item")
+        nearest_sims = self.get_N_neighbors(user_id, item_id, similarity_type="item")
         items = np.ones((len(nearest_sims), self.x_train.shape[0]))
         sims = np.ones(len(nearest_sims))
 
@@ -194,7 +196,7 @@ def evaluation(method, size, repeats):
             while invalid_pair:
                 row = random.randint(0, rows-1)
                 column = random.randint(0, columns-1)
-                if model.x_train[row][column] != np.nan:
+                if ~np.isnan(model.x_train[row][column]):
                     user_id = row
                     item_id = column 
                     actual_rating = model.x_train[user_id][item_id]
@@ -278,6 +280,7 @@ def eval_report(results):
     print(f"False Positives: {false_positives}")
     print(f"True Negatives: {true_negatives}")
     print(f"False Negatives: {false_negatives}")
+    
 
     precision = true_positives / (true_positives + false_positives)
     recall = true_positives / (true_positives + false_negatives)
