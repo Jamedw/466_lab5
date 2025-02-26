@@ -230,7 +230,7 @@ def evaluation_csv(method, filepath, repeats):
     points = pd.read_csv(filepath, header=None)
     results = []
     
-    for i in range(repeats):
+    for _ in range(repeats):
         run_delta = np.ones(len(points))
         for index, row in points.iterrows():
             user_id = row[0]
@@ -249,8 +249,8 @@ def evaluation_csv(method, filepath, repeats):
             }
             results.append(result)
     
-    print(f"MAE: {np.nanmean(abs(run_delta))}")
-    print(f"Standard Deviation; {np.sqrt(np.nansum(np.square(run_delta - np.nanmean(run_delta))) / len(run_delta))}")
+        print(f"MAE: {np.nanmean(abs(run_delta))}")
+        print(f"Standard Deviation; {np.sqrt(np.nansum(np.square(run_delta - np.nanmean(run_delta))) / len(run_delta))}")
     return results
 
 def eval_report(results):
