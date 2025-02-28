@@ -225,7 +225,7 @@ def evaluation(method, size, repeats):
     print(f"Overall MAE: {abs(flat_runs_deltas).mean()}")
     """
     
-def evaluation_csv(method, filepath, repeats):
+def evaluation_csv(method, filepath, repeats=1):
     model = collaborative_filtering(method)
     model.fit(collaborative_filtering.parse_data("./jester-data-1.csv"))
 
