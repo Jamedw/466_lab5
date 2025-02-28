@@ -281,10 +281,16 @@ def eval_report(results):
     print(f"True Negatives: {true_negatives}")
     print(f"False Negatives: {false_negatives}")
     
-
-    precision = true_positives / (true_positives + false_positives)
-    recall = true_positives / (true_positives + false_negatives)
-    f1 = 2 * (precision * recall) / (precision + recall)
+    ## handling divide by zero
+    true_positives_false_positives =  (true_positives + false_positives) if (true_positives + false_positives) else 1
+    true_positives_false_negatives = (true_positives + false_negatives) if (true_positives + false_negatives) else 1
+    
+    precision = true_positives / true_positives_false_positives
+    recall = true_positives / true_positives_false_negatives
+                                  
+    ## handling divide by zero
+    precision_recall =  (precision + recall) if  (precision + recall) else 1 
+    f1 = 2 * (precision * recall) / precision_recall
     accuracy = (true_positives + true_negatives) / total
 
     print("\nRecommendation Metrics:")
